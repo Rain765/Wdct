@@ -215,7 +215,7 @@ export function DocumentComparator({
         </Button>
       </div>
 
-      <div className="h-72">
+      <div className="h-[500px]">
         <DiffReport
           differences={differences}
           onItemClick={handleDifferenceClick}

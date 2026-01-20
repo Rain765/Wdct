@@ -29,15 +29,15 @@ export function DiffReport({ differences, onItemClick, selectedId }: DiffReportP
   };
 
   return (
-    <Card className="h-full">
-      <div className="p-4 border-b">
+    <Card className="h-full flex flex-col">
+      <div className="p-4 border-b shrink-0">
         <h3 className="font-medium">差异报告</h3>
         <p className="text-sm text-gray-500 mt-1">
           共发现 {differences.length} 处差异
         </p>
       </div>
       
-      <ScrollArea className="h-[calc(100%-80px)]">
+      <ScrollArea className="flex-1">
         <div className="p-4 space-y-3">
           {differences.map((diff) => (
             <div
