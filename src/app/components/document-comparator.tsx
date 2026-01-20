@@ -11,14 +11,12 @@ interface DocumentComparatorProps {
   fileB: File | null;
 }
 
-interface Difference {
+export interface DifferenceSegment {
   id: number;
-  position: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
+  type: "addition" | "deletion";
+  line: number; // 0-based line index (split by \n)
+  startCol: number; // 0-based column in the line
+  endCol: number; // exclusive
   text: string;
 }
 
@@ -32,10 +30,10 @@ export function DocumentComparator({
     [],
   );
   const [differencesA, setDifferencesA] = useState<
-    Difference[]
+    DifferenceSegment[]
   >([]);
   const [differencesB, setDifferencesB] = useState<
-    Difference[]
+    DifferenceSegment[]
   >([]);
   const [selectedDiffId, setSelectedDiffId] = useState<
     number | undefined
@@ -95,15 +93,9 @@ export function DocumentComparator({
       // dmp.diff_cleanupSemantic(diffs);
 
       const diffItems: DiffItem[] = [];
-      const diffsA: Difference[] = [];
-      const diffsB: Difference[] = [];
+      const diffsA: DifferenceSegment[] = [];
+      const diffsB: DifferenceSegment[] = [];
       let diffId = 1;
-
-      // 字符渲染参数
-      const charWidth = 8; // 等宽字体下每个字符的宽度（px，近似）
-      const lineHeight = 24; // 行高（px）
-      const leftPadding = 32; // 左边距（px）
-      const topPadding = 32; // 上边距（px）——与 DocumentViewer 的 p-8 对齐
 
       type Cursor = { line: number; col: number };
       const cursorA: Cursor = { line: 0, col: 0 };
@@ -119,7 +111,7 @@ export function DocumentComparator({
         cursor.col = parts[parts.length - 1].length;
       };
 
-      const addBoxesForText = (
+      const addSegmentsForText = (
         which: "A" | "B",
         text: string,
         baseCursor: Cursor,
@@ -149,19 +141,17 @@ export function DocumentComparator({
               position: positionStr,
             });
 
-            const box: Difference = {
+            const segment: DifferenceSegment = {
               id: nextId,
-              position: {
-                x: leftPadding + col * charWidth,
-                y: line * lineHeight + topPadding,
-                width: chunk.length * charWidth,
-                height: lineHeight - 4,
-              },
+              type: which === "A" ? "deletion" : "addition",
+              line,
+              startCol: col,
+              endCol: col + chunk.length,
               text: chunk,
             };
 
-            if (which === "A") diffsA.push(box);
-            else diffsB.push(box);
+            if (which === "A") diffsA.push(segment);
+            else diffsB.push(segment);
 
             nextId++;
           }
@@ -183,11 +173,11 @@ export function DocumentComparator({
 
         if (type === -1) {
           // 删除的内容（在A中存在，B中不存在）
-          diffId = addBoxesForText("A", text, cursorA, diffId);
+          diffId = addSegmentsForText("A", text, cursorA, diffId);
           advanceCursor(cursorA, text);
         } else if (type === 1) {
           // 新增的内容（在B中存在，A中不存在）
-          diffId = addBoxesForText("B", text, cursorB, diffId);
+          diffId = addSegmentsForText("B", text, cursorB, diffId);
           advanceCursor(cursorB, text);
         } else {
           // 相同的内容
@@ -239,12 +229,14 @@ export function DocumentComparator({
           content={contentA || "请上传文档 A"}
           differences={differencesA}
           onDifferenceClick={handleDifferenceClick}
+          selectedId={selectedDiffId}
         />
         <DocumentViewer
           title="文档 B"
           content={contentB || "请上传文档 B"}
           differences={differencesB}
           onDifferenceClick={handleDifferenceClick}
+          selectedId={selectedDiffId}
         />
       </div>
     </div>
