@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Card } from '@/app/components/ui/card';
 
 interface Difference {
@@ -22,6 +22,17 @@ interface DocumentViewerProps {
 export function DocumentViewer({ title, content, differences, onDifferenceClick }: DocumentViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+
+  const LINE_HEIGHT = 24;
+  const TOP_PADDING = 32; // 与容器 p-8 对齐
+  const getLineKey = (y: number) =>
+    Math.max(0, Math.round((y - TOP_PADDING) / LINE_HEIGHT));
+
+  const sortedDiffs = [...differences].sort((a, b) => {
+    if (a.position.y !== b.position.y) return a.position.y - b.position.y;
+    return a.position.x - b.position.x;
+  });
+  const labeledLines = new Set<number>();
 
   return (
     <Card className="flex flex-col h-full">
@@ -50,29 +61,36 @@ export function DocumentViewer({ title, content, differences, onDifferenceClick 
           className="bg-white p-8 shadow-sm relative mx-auto max-w-4xl"
           style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}
         >
-          <div
-            className="whitespace-pre-wrap"
-            dangerouslySetInnerHTML={{ __html: content }}
-          />
+          <pre className="whitespace-pre font-mono text-sm leading-6 text-gray-900">
+            {content}
+          </pre>
           
           {/* 差异标注 */}
-          {differences.map((diff) => (
-            <div
-              key={diff.id}
-              className="absolute border-2 border-red-500 cursor-pointer hover:border-red-700 transition-all pointer-events-auto"
-              style={{
-                left: `${diff.position.x}px`,
-                top: `${diff.position.y}px`,
-                width: `${diff.position.width}px`,
-                height: `${diff.position.height}px`,
-              }}
-              onClick={() => onDifferenceClick(diff.id)}
-            >
-              <div className="absolute -top-6 -left-1 bg-red-500 text-white text-xs px-2 py-1 rounded shadow-md">
-                #{diff.id}
+          {sortedDiffs.map((diff) => {
+            const lineKey = getLineKey(diff.position.y);
+            const showLabel = !labeledLines.has(lineKey);
+            if (showLabel) labeledLines.add(lineKey);
+
+            return (
+              <div
+                key={`${diff.id}-${diff.position.x}-${diff.position.y}`}
+                className="absolute border border-red-500/80 bg-red-500/10 cursor-pointer hover:border-red-600 transition-all pointer-events-auto"
+                style={{
+                  left: `${diff.position.x}px`,
+                  top: `${diff.position.y}px`,
+                  width: `${diff.position.width}px`,
+                  height: `${diff.position.height}px`,
+                }}
+                onClick={() => onDifferenceClick(diff.id)}
+              >
+                {showLabel && (
+                  <div className="absolute -top-6 -left-1 bg-white/70 text-red-600 text-xs px-2 py-1 rounded border border-red-200 shadow-sm backdrop-blur-sm">
+                    #{diff.id}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </Card>

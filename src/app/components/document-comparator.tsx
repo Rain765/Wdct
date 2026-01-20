@@ -99,109 +99,100 @@ export function DocumentComparator({
       const diffsB: Difference[] = [];
       let diffId = 1;
 
-      // 用于计算字符在文档中的位置
-      let charIndexA = 0;
-      let charIndexB = 0;
-
       // 字符渲染参数
-      const charWidth = 8; // 每个字符的平均宽度
-      const lineHeight = 24; // 行高
-      const charsPerLine = 70; // 每行大约字符数
-      const leftPadding = 32; // 左边距
+      const charWidth = 8; // 等宽字体下每个字符的宽度（px，近似）
+      const lineHeight = 24; // 行高（px）
+      const leftPadding = 32; // 左边距（px）
+      const topPadding = 32; // 上边距（px）——与 DocumentViewer 的 p-8 对齐
+
+      type Cursor = { line: number; col: number };
+      const cursorA: Cursor = { line: 0, col: 0 };
+      const cursorB: Cursor = { line: 0, col: 0 };
+
+      const advanceCursor = (cursor: Cursor, text: string) => {
+        const parts = text.split("\n");
+        if (parts.length === 1) {
+          cursor.col += text.length;
+          return;
+        }
+        cursor.line += parts.length - 1;
+        cursor.col = parts[parts.length - 1].length;
+      };
+
+      const addBoxesForText = (
+        which: "A" | "B",
+        text: string,
+        baseCursor: Cursor,
+        startingId: number,
+      ): number => {
+        const lines = text.split("\n");
+        let line = baseCursor.line;
+        let col = baseCursor.col;
+        let nextId = startingId;
+
+        lines.forEach((chunk, idx) => {
+          if (chunk.length > 0) {
+            const positionStr = `第 ${line + 1} 行，第 ${col + 1} 字符`;
+
+            // 报告项（按 chunk 粒度）
+            diffItems.push({
+              id: nextId,
+              type: which === "A" ? "deletion" : "addition",
+              textA:
+                which === "A"
+                  ? chunk.substring(0, 50) + (chunk.length > 50 ? "..." : "")
+                  : "",
+              textB:
+                which === "B"
+                  ? chunk.substring(0, 50) + (chunk.length > 50 ? "..." : "")
+                  : "",
+              position: positionStr,
+            });
+
+            const box: Difference = {
+              id: nextId,
+              position: {
+                x: leftPadding + col * charWidth,
+                y: line * lineHeight + topPadding,
+                width: chunk.length * charWidth,
+                height: lineHeight - 4,
+              },
+              text: chunk,
+            };
+
+            if (which === "A") diffsA.push(box);
+            else diffsB.push(box);
+
+            nextId++;
+          }
+
+          // 推进到下一行 / 同一行后续
+          if (idx < lines.length - 1) {
+            line += 1;
+            col = 0;
+          } else {
+            col += chunk.length;
+          }
+        });
+
+        return nextId;
+      };
 
       diffs.forEach((diff) => {
         const [type, text] = diff;
 
         if (type === -1) {
           // 删除的内容（在A中存在，B中不存在）
-          const lines = text.split("\n");
-          let tempCharIndex = charIndexA;
-
-          lines.forEach((line, lineIdx) => {
-            if (line.length > 0) {
-              const lineNumber = Math.floor(
-                tempCharIndex / charsPerLine,
-              );
-              const charInLine = tempCharIndex % charsPerLine;
-
-              diffItems.push({
-                id: diffId,
-                type: "deletion",
-                textA:
-                  line.substring(0, 50) +
-                  (line.length > 50 ? "..." : ""),
-                textB: "",
-                position: `第 ${lineNumber + 1} 行，第 ${charInLine + 1} 字符`,
-              });
-
-              diffsA.push({
-                id: diffId,
-                position: {
-                  x: leftPadding + charInLine * charWidth,
-                  y: lineNumber * lineHeight + 10,
-                  width: Math.min(line.length * charWidth, 600),
-                  height: lineHeight - 4,
-                },
-                text: line,
-              });
-
-              diffId++;
-            }
-
-            tempCharIndex += line.length;
-            if (lineIdx < lines.length - 1) {
-              tempCharIndex += 1; // 换行符
-            }
-          });
-
-          charIndexA += text.length;
+          diffId = addBoxesForText("A", text, cursorA, diffId);
+          advanceCursor(cursorA, text);
         } else if (type === 1) {
           // 新增的内容（在B中存在，A中不存在）
-          const lines = text.split("\n");
-          let tempCharIndex = charIndexB;
-
-          lines.forEach((line, lineIdx) => {
-            if (line.length > 0) {
-              const lineNumber = Math.floor(
-                tempCharIndex / charsPerLine,
-              );
-              const charInLine = tempCharIndex % charsPerLine;
-
-              diffItems.push({
-                id: diffId,
-                type: "addition",
-                textA: "",
-                textB:
-                  line.substring(0, 50) +
-                  (line.length > 50 ? "..." : ""),
-                position: `第 ${lineNumber + 1} 行，第 ${charInLine + 1} 字符`,
-              });
-
-              diffsB.push({
-                id: diffId,
-                position: {
-                  x: leftPadding + charInLine * charWidth,
-                  y: lineNumber * lineHeight + 10,
-                  width: Math.min(line.length * charWidth, 600),
-                  height: lineHeight - 4,
-                },
-                text: line,
-              });
-
-              diffId++;
-            }
-
-            tempCharIndex += line.length;
-            if (lineIdx < lines.length - 1) {
-              tempCharIndex += 1; // 换行符
-            }
-          });
-
-          charIndexB += text.length;
+          diffId = addBoxesForText("B", text, cursorB, diffId);
+          advanceCursor(cursorB, text);
         } else {
           // 相同的内容
-          charIndexA += text.length;
-          charIndexB += text.length;
+          advanceCursor(cursorA, text);
+          advanceCursor(cursorB, text);
         }
       });
 
@@ -234,6 +225,14 @@ export function DocumentComparator({
         </Button>
       </div>
 
+      <div className="h-72">
+        <DiffReport
+          differences={differences}
+          onItemClick={handleDifferenceClick}
+          selectedId={selectedDiffId}
+        />
+      </div>
+
       <div className="grid grid-cols-2 gap-4 flex-1 min-h-0">
         <DocumentViewer
           title="文档 A"
@@ -246,14 +245,6 @@ export function DocumentComparator({
           content={contentB || "请上传文档 B"}
           differences={differencesB}
           onDifferenceClick={handleDifferenceClick}
-        />
-      </div>
-
-      <div className="h-80">
-        <DiffReport
-          differences={differences}
-          onItemClick={handleDifferenceClick}
-          selectedId={selectedDiffId}
         />
       </div>
     </div>
