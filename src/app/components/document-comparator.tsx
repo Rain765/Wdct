@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import DiffMatchPatch from "diff-match-patch";
 import { DocumentViewer } from "./document-viewer";
 import { DiffReport, DiffItem } from "./diff-report";
-import { Button } from "@/app/components/ui/button";
 import { Loader2 } from "lucide-react";
 import mammoth from "mammoth";
 
@@ -39,6 +38,7 @@ export function DocumentComparator({
     number | undefined
   >();
   const [isComparing, setIsComparing] = useState(false);
+  const lastComparedKeyRef = useRef<string>("");
 
   // 读取文件内容
   const readFileContent = async (
@@ -79,18 +79,30 @@ export function DocumentComparator({
     }
   }, [fileB]);
 
-  // 执行对比
+  const compareKey = useMemo(() => {
+    // Avoid comparing huge strings in deps; use file metadata + content length as a coarse key.
+    // If content changes but length stays the same, diff might not refresh; include a small prefix.
+    const metaA = fileA
+      ? `${fileA.name}:${fileA.size}:${fileA.lastModified}`
+      : "noA";
+    const metaB = fileB
+      ? `${fileB.name}:${fileB.size}:${fileB.lastModified}`
+      : "noB";
+    const sigA = `${contentA.length}:${contentA.slice(0, 32)}`;
+    const sigB = `${contentB.length}:${contentB.slice(0, 32)}`;
+    return `${metaA}|${metaB}|${sigA}|${sigB}`;
+  }, [fileA, fileB, contentA, contentB]);
+
+  // 执行对比（自动触发）
   const performComparison = () => {
     if (!contentA || !contentB) return;
 
     setIsComparing(true);
 
-    setTimeout(() => {
+    // Run in next tick to allow UI to show "comparing" state.
+    queueMicrotask(() => {
       const dmp = new DiffMatchPatch();
-      // 设置为逐字符对比，不进行语义清理以保持精确度
       const diffs = dmp.diff_main(contentA, contentB);
-      // 注释掉语义清理，保持每个字符的差异
-      // dmp.diff_cleanupSemantic(diffs);
 
       const diffItems: DiffItem[] = [];
       const diffsA: DifferenceSegment[] = [];
@@ -126,7 +138,6 @@ export function DocumentComparator({
           if (chunk.length > 0) {
             const positionStr = `第 ${line + 1} 行，第 ${col + 1} 字符`;
 
-            // 报告项（按 chunk 粒度）
             diffItems.push({
               id: nextId,
               type: which === "A" ? "deletion" : "addition",
@@ -156,7 +167,6 @@ export function DocumentComparator({
             nextId++;
           }
 
-          // 推进到下一行 / 同一行后续
           if (idx < lines.length - 1) {
             line += 1;
             col = 0;
@@ -172,15 +182,12 @@ export function DocumentComparator({
         const [type, text] = diff;
 
         if (type === -1) {
-          // 删除的内容（在A中存在，B中不存在）
           diffId = addSegmentsForText("A", text, cursorA, diffId);
           advanceCursor(cursorA, text);
         } else if (type === 1) {
-          // 新增的内容（在B中存在，A中不存在）
           diffId = addSegmentsForText("B", text, cursorB, diffId);
           advanceCursor(cursorB, text);
         } else {
-          // 相同的内容
           advanceCursor(cursorA, text);
           advanceCursor(cursorB, text);
         }
@@ -190,7 +197,7 @@ export function DocumentComparator({
       setDifferencesA(diffsA);
       setDifferencesB(diffsB);
       setIsComparing(false);
-    }, 500);
+    });
   };
 
   const handleDifferenceClick = (id: number) => {
@@ -199,20 +206,27 @@ export function DocumentComparator({
 
   const canCompare = fileA && fileB && contentA && contentB;
 
+  useEffect(() => {
+    if (!canCompare) return;
+    if (isComparing) return;
+    if (lastComparedKeyRef.current === compareKey) return;
+
+    lastComparedKeyRef.current = compareKey;
+    setSelectedDiffId(undefined);
+    performComparison();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canCompare, compareKey]);
+
   return (
     <div className="space-y-4 h-full flex flex-col">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">文档对比</h2>
-        <Button
-          onClick={performComparison}
-          disabled={!canCompare || isComparing}
-          size="lg"
-        >
-          {isComparing && (
+        {isComparing && (
+          <div className="flex items-center text-sm text-gray-500">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          )}
-          {isComparing ? "对比中..." : "开始对比"}
-        </Button>
+            对比中...
+          </div>
+        )}
       </div>
 
       <div className="h-[500px]">
