@@ -29,7 +29,7 @@ export function DiffReport({ differences, onItemClick, selectedId }: DiffReportP
   };
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="h-full flex flex-col overflow-hidden">
       <div className="p-4 border-b shrink-0">
         <h3 className="font-medium">差异报告</h3>
         <p className="text-sm text-gray-500 mt-1">
