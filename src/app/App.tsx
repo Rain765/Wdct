@@ -21,9 +21,9 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <div className="flex items-start gap-3">
+          <div className="flex items-center gap-3">
             <Image src="/logo.svg" alt="Logo" width={64} height={64} priority />
-            <div className="h-16 flex flex-col justify-between">
+            <div className="flex flex-col gap-1">
               <h1 className="text-2xl font-bold text-gray-900 leading-none">
                 文档校对工具
               </h1>
