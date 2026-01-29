@@ -21,13 +21,17 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-1 inline-flex items-center gap-3">
+          <div className="flex items-start gap-3">
             <Image src="/logo.svg" alt="Logo" width={64} height={64} priority />
-            文档校对工具
-          </h1>
-          <p className="text-gray-600 text-sm">
-            智能对比两个文档的差异，自动标注并生成详细报告
-          </p>
+            <div className="h-16 flex flex-col justify-between">
+              <h1 className="text-2xl font-bold text-gray-900 leading-none">
+                文档校对工具
+              </h1>
+              <p className="text-gray-600 text-sm leading-none">
+                智能对比两个文档的差异，自动标注并生成详细报告
+              </p>
+            </div>
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
