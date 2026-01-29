@@ -23,7 +23,7 @@ function App() {
         <div className="mb-8">
           <div className="flex items-center gap-0">
             <Image src="/logo.svg" alt="Logo" width={64} height={64} priority />
-            <div className="flex flex-col gap-[4px]">
+            <div className="flex flex-col gap-[8px]">
               <h1 className="text-2xl font-bold text-gray-900 leading-none">
                 文档校对工具
               </h1>
