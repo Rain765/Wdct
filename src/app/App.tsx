@@ -25,7 +25,7 @@ function App() {
             <Image src="/logo.svg" alt="Logo" width={64} height={64} priority />
             <div className="flex flex-col gap-[8px]">
               <h1 className="text-2xl font-bold text-gray-900 leading-none">
-                文档校对工具
+                Textora
               </h1>
               <p className="text-gray-600 text-sm leading-none">
                 智能对比两个文档的差异，自动标注并生成详细报告
