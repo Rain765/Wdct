@@ -9,9 +9,37 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 function DesignReview() {
   const [designUrl, setDesignUrl] = useState('');
   const [implUrl, setImplUrl] = useState('');
+  const [showFigmaHelp, setShowFigmaHelp] = useState(false);
+  const FIGMA_MCP_DOWNLOAD_URL = 'https://textora.app/figma-mcp';
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-gray-900">设计走查</h2>
+        <button
+          type="button"
+          className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+          onClick={() => {
+            window.open(FIGMA_MCP_DOWNLOAD_URL, '_blank');
+            setShowFigmaHelp(true);
+          }}
+        >
+          下载 Figma MCP 服务
+        </button>
+      </div>
+
+      {showFigmaHelp && (
+        <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-blue-900 space-y-1">
+          <p className="font-semibold">如何在 Textora 中启用 Figma MCP：</p>
+          <ol className="list-decimal list-inside space-y-1">
+            <li>点击右上角按钮，在浏览器中打开 Textora Figma MCP 下载页面并完成安装。</li>
+            <li>安装完成后，在 Textora 内打开「设置 &gt; 集成 &gt; Figma MCP」，登录你的 Figma 账号并授权。</li>
+            <li>在 Figma 中选中 Frame 或 Page，使用集成提供的入口一键复制页面链接。</li>
+            <li>将复制的链接粘贴到下方「设计稿」输入框中进行设计走查。</li>
+          </ol>
+        </div>
+      )}
+
       <div className="grid md:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow-sm p-4 space-y-3">
           <h3 className="font-semibold">设计稿</h3>
