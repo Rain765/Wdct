@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState, type DragEvent } from 'react';
 import Image from 'next/image';
 import { FileUploader } from './components/file-uploader';
 import { DocumentComparator } from './components/document-comparator';
@@ -10,6 +10,42 @@ function DesignReview() {
   const [designUrl, setDesignUrl] = useState('');
   const [implUrl, setImplUrl] = useState('');
 
+  const designFileInputRef = useRef<HTMLInputElement | null>(null);
+  const implFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [designIsImage, setDesignIsImage] = useState(false);
+  const [implIsImage, setImplIsImage] = useState(false);
+
+  const handleFile = (side: 'design' | 'impl', file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    const objectUrl = URL.createObjectURL(file);
+    if (side === 'design') {
+      setDesignUrl(objectUrl);
+      setDesignIsImage(true);
+    } else {
+      setImplUrl(objectUrl);
+      setImplIsImage(true);
+    }
+  };
+
+  const handleDrop =
+    (side: 'design' | 'impl') =>
+    (event: DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const file = event.dataTransfer.files?.[0];
+      if (file) {
+        handleFile(side, file);
+      }
+    };
+
+  const handleClickUpload = (side: 'design' | 'impl') => {
+    if (side === 'design') {
+      designFileInputRef.current?.click();
+    } else {
+      implFileInputRef.current?.click();
+    }
+  };
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold text-gray-900">设计走查</h2>
@@ -18,21 +54,49 @@ function DesignReview() {
         <div className="bg-white rounded-lg shadow-sm p-4 space-y-3">
           <h3 className="font-semibold">设计稿</h3>
           <input
+            ref={designFileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleFile('design', file);
+            }}
+          />
+          <input
             className="w-full px-3 py-2 text-sm border rounded-md outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             placeholder="粘贴 Figma 链接、设计图 URL 或上传后提供的链接"
             value={designUrl}
-            onChange={(e) => setDesignUrl(e.target.value)}
+            onChange={(e) => {
+              setDesignUrl(e.target.value);
+              setDesignIsImage(false);
+            }}
           />
-          <div className="border rounded-md overflow-hidden bg-gray-50 min-h-[260px] flex items-center justify-center">
+          <div
+            className="border border-dashed rounded-md overflow-hidden bg-gray-50 min-h-[260px] flex items-center justify-center cursor-pointer"
+            onClick={() => handleClickUpload('design')}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={handleDrop('design')}
+          >
             {designUrl ? (
-              <iframe
-                src={designUrl}
-                className="w-full h-72 border-0"
-                title="设计稿预览"
-              />
+              designIsImage ? (
+                // 本地或远程图片
+                <img
+                  src={designUrl}
+                  alt="设计稿预览"
+                  className="max-h-72 w-auto object-contain"
+                />
+              ) : (
+                // Figma 等页面链接
+                <iframe
+                  src={designUrl}
+                  className="w-full h-72 border-0"
+                  title="设计稿预览"
+                />
+              )
             ) : (
               <p className="text-xs text-gray-400">
-                在上方输入设计稿链接（如 Figma / 图片 URL），这里会展示预览，方便与实现页面对比。
+                在上方输入设计稿链接（如 Figma / 图片 URL），或点击/拖拽上传截图，这里会展示预览，方便与实现页面对比。
               </p>
             )}
           </div>
@@ -41,21 +105,47 @@ function DesignReview() {
         <div className="bg-white rounded-lg shadow-sm p-4 space-y-3">
           <h3 className="font-semibold">实现页面</h3>
           <input
+            ref={implFileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleFile('impl', file);
+            }}
+          />
+          <input
             className="w-full px-3 py-2 text-sm border rounded-md outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             placeholder="粘贴页面链接或截图 URL"
             value={implUrl}
-            onChange={(e) => setImplUrl(e.target.value)}
+            onChange={(e) => {
+              setImplUrl(e.target.value);
+              setImplIsImage(false);
+            }}
           />
-          <div className="border rounded-md overflow-hidden bg-gray-50 min-h-[260px] flex items-center justify-center">
+          <div
+            className="border border-dashed rounded-md overflow-hidden bg-gray-50 min-h-[260px] flex items-center justify-center cursor-pointer"
+            onClick={() => handleClickUpload('impl')}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={handleDrop('impl')}
+          >
             {implUrl ? (
-              <iframe
-                src={implUrl}
-                className="w-full h-72 border-0"
-                title="实现页面预览"
-              />
+              implIsImage ? (
+                <img
+                  src={implUrl}
+                  alt="实现页面截图预览"
+                  className="max-h-72 w-auto object-contain"
+                />
+              ) : (
+                <iframe
+                  src={implUrl}
+                  className="w-full h-72 border-0"
+                  title="实现页面预览"
+                />
+              )
             ) : (
               <p className="text-xs text-gray-400">
-                在上方输入实际页面链接或截图 URL，和左侧设计稿一起进行走查。
+                在上方输入实际页面链接或截图 URL，或点击/拖拽上传截图，和左侧设计稿一起进行走查。
               </p>
             )}
           </div>
